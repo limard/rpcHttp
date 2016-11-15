@@ -7,6 +7,7 @@ package rpc
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -91,9 +92,15 @@ func (s *Server) HasMethod(method string) bool {
 	return false
 }
 
+// EnumMethodInfo to get infomation of each method
+func (s *Server) EnumMethodInfo() []string {
+	return s.services.enumMethodInfo()
+}
+
 // ServeHTTP
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
+		log.Println("POST method required")
 		WriteError(w, 405, "rpc: POST method required, received "+r.Method)
 		return
 	}
@@ -110,6 +117,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			codec = c
 		}
 	} else if codec = s.codecs[strings.ToLower(contentType)]; codec == nil {
+		log.Println("unrecognized Content-Type")
 		WriteError(w, 415, "rpc: unrecognized Content-Type: "+contentType)
 		return
 	}
@@ -118,22 +126,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get service method to be called.
 	method, errMethod := codecReq.Method()
 	if errMethod != nil {
+		log.Println("errMethod", errMethod)
 		codecReq.WriteError(w, 400, errMethod)
 		return
 	}
 	serviceSpec, methodSpec, errGet := s.services.get(method)
 	if errGet != nil {
+		log.Println("errGet", errGet)
 		codecReq.WriteError(w, 400, errGet)
 		return
 	}
 	// Decode the args.
 	args := reflect.New(methodSpec.argsType)
 	if errRead := codecReq.ReadRequest(args.Interface()); errRead != nil {
+		log.Println("errRead", errRead)
 		codecReq.WriteError(w, 400, errRead)
 		return
 	}
 	// Call the service method.
 	reply := reflect.New(methodSpec.replyType)
+	methodSpec.counter++
 	errValue := methodSpec.method.Func.Call([]reflect.Value{
 		serviceSpec.rcvr,
 		reflect.ValueOf(r),
@@ -153,6 +165,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if errResult == nil {
 		codecReq.WriteResponse(w, reply.Interface())
 	} else {
+		log.Println("write err:", errResult)
 		codecReq.WriteError(w, 400, errResult)
 	}
 }

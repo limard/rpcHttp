@@ -36,6 +36,7 @@ type serviceMethod struct {
 	method    reflect.Method // receiver method
 	argsType  reflect.Type   // type of the request argument
 	replyType reflect.Type   // type of the response argument
+	counter   int            // used to record the number of calls
 }
 
 // ----------------------------------------------------------------------------
@@ -145,6 +146,15 @@ func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 		return nil, nil, err
 	}
 	return service, serviceMethod, nil
+}
+
+func (m *serviceMap) enumMethodInfo() (methodNames []string) {
+	for _, s := range m.services {
+		for mn, mv := range s.methods {
+			methodNames = append(methodNames, fmt.Sprintf(`%v.%v   calls:%v`, s.name, mn, mv.counter))
+		}
+	}
+	return methodNames
 }
 
 // isExported returns true of a string is an exported (upper case) name.

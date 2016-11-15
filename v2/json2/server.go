@@ -7,6 +7,7 @@ package json2
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/rpc/v2"
@@ -187,12 +188,25 @@ func (c *CodecRequest) WriteError(w http.ResponseWriter, status int, err error) 
 func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, res *serverResponse) {
 	// Id is null for notifications and they don't have a response.
 	if c.request.Id != nil {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		encoder := json.NewEncoder(c.encoder.Encode(w))
-		err := encoder.Encode(res)
+
+		var buffer []byte
+		var err error
+		buffer, err = json.Marshal(c.request)
+		// log.Println("Request:", string(buffer))
+
+		buffer, err = json.Marshal(res)
+		// log.Println("Response:", string(buffer))
+
+		w.Write(buffer)
+		// encoder := json.NewEncoder(c.encoder.Encode(w))
+		// err = encoder.Encode(res)
 
 		// Not sure in which case will this happen. But seems harmless.
 		if err != nil {
+			log.Println("json Encode:", err.Error())
 			rpc.WriteError(w, 400, err.Error())
 		}
 	}
