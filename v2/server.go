@@ -100,7 +100,7 @@ func (s *Server) EnumMethodInfo() []string {
 // ServeHTTP
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		log.Println("POST method required")
+		log.Printf("POST method required, Current: %s", r.Method)
 		WriteError(w, 405, "rpc: POST method required, received "+r.Method)
 		return
 	}
@@ -117,7 +117,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			codec = c
 		}
 	} else if codec = s.codecs[strings.ToLower(contentType)]; codec == nil {
-		log.Println("unrecognized Content-Type")
+		log.Printf("unrecognized Content-Type(%s)", contentType)
 		WriteError(w, 415, "rpc: unrecognized Content-Type: "+contentType)
 		return
 	}

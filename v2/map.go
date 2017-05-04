@@ -130,6 +130,17 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 	parts := strings.Split(method, ".")
 	if len(parts) != 2 {
+		// for method name not include period char(.)
+		if len(parts) == 1 {
+			for _, service := range m.services {
+				serviceMethod := service.methods[parts[0]]
+				if serviceMethod == nil {
+					continue
+				}
+				return service, serviceMethod, nil
+			}
+		}
+
 		err := fmt.Errorf("rpc: service/method request ill-formed: %q", method)
 		return nil, nil, err
 	}
