@@ -3,12 +3,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package json2
+package jsonrpc2
 
 import (
 	"encoding/json"
 	"io"
 	"math/rand"
+	"bytes"
+	"net/http"
 )
 
 // ----------------------------------------------------------------------------
@@ -72,4 +74,20 @@ func DecodeClientResponse(r io.Reader, reply interface{}) error {
 	}
 
 	return json.Unmarshal(*c.Result, reply)
+}
+
+func Call(url string, method string, request interface{}, reply interface{}) error {
+	jsonReqBuf, err := EncodeClientRequest(method, request)
+	if err != nil {
+		return err
+	}
+
+	jsonReqBufR := bytes.NewReader(jsonReqBuf)
+	rsp, err := http.Post(url, `application/json`, jsonReqBufR)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+
+	return DecodeClientResponse(rsp.Body, reply)
 }

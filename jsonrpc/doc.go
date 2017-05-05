@@ -10,8 +10,8 @@ To register the codec in a RPC server:
 
 	import (
 		"http"
-		"github.com/gorilla/rpc/v2"
-		"github.com/gorilla/rpc/v2/json"
+		"github.com/gorilla/rpc/RpcHTTP"
+		"github.com/gorilla/rpc/RpcHTTP/json"
 	)
 
 	func init() {
@@ -55,4 +55,4 @@ Check the gorilla/rpc documentation for more details:
 
 	http://gorilla-web.appspot.com/pkg/rpc
 */
-package json
+package jsonrpc

@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/v2"
 )
 
 var null = json.RawMessage([]byte("null"))
@@ -115,29 +115,32 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 }
 
 // WriteResponse encodes the response and writes it to the ResponseWriter.
-//
-// The err parameter is the error resulted from calling the RPC method,
-// or nil if there was no error.
-func (c *CodecRequest) WriteResponse(w http.ResponseWriter, reply interface{}, methodErr error) error {
-	if c.err != nil {
-		return c.err
-	}
+func (c *CodecRequest) WriteResponse(w http.ResponseWriter, reply interface{}) {
 	res := &serverResponse{
 		Result: reply,
 		Error:  &null,
 		Id:     c.request.Id,
 	}
-	if methodErr != nil {
-		// Propagate error message as string.
-		res.Error = methodErr.Error()
-		// Result must be null if there was an error invoking the method.
-		res.Result = &struct {
+	c.writeServerResponse(w, 200, res)
+}
+
+func (c *CodecRequest) WriteError(w http.ResponseWriter, status int, err error) {
+	res := &serverResponse{
+		Result: &struct {
 			ErrorMessage interface{} `json:"error_message"`
-		}{res.Error}
-		w.WriteHeader(500)
+		}{err.Error()},
+		Id: c.request.Id,
 	}
+	c.writeServerResponse(w, status, res)
+}
+
+func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, status int, res *serverResponse) {
+	b, err := json.Marshal(res.Result)
+	if err != nil {
+		rpc.WriteError(w, 400, err.Error())
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	encoder := json.NewEncoder(w)
-	encoder.Encode(res.Result)
-	return nil
+	w.WriteHeader(status)
+	w.Write(b)
 }

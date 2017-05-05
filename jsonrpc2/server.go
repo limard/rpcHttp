@@ -3,14 +3,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package json2
+package jsonrpc2
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/Limard/rpc/v2"
+	"github.com/Limard/rpcHttp"
 )
 
 var null = json.RawMessage([]byte("null"))
@@ -61,22 +61,22 @@ type serverResponse struct {
 // ----------------------------------------------------------------------------
 
 // NewcustomCodec returns a new JSON Codec based on passed encoder selector.
-func NewCustomCodec(encSel rpc.EncoderSelector) *Codec {
+func NewCustomCodec(encSel rpcHttp.EncoderSelector) *Codec {
 	return &Codec{encSel: encSel}
 }
 
 // NewCodec returns a new JSON Codec.
 func NewCodec() *Codec {
-	return NewCustomCodec(rpc.DefaultEncoderSelector)
+	return NewCustomCodec(rpcHttp.DefaultEncoderSelector)
 }
 
 // Codec creates a CodecRequest to process each request.
 type Codec struct {
-	encSel rpc.EncoderSelector
+	encSel rpcHttp.EncoderSelector
 }
 
 // NewRequest returns a CodecRequest.
-func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
+func (c *Codec) NewRequest(r *http.Request) rpcHttp.CodecRequest {
 	return newCodecRequest(r, c.encSel.Select(r))
 }
 
@@ -85,7 +85,7 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 // ----------------------------------------------------------------------------
 
 // newCodecRequest returns a new CodecRequest.
-func newCodecRequest(r *http.Request, encoder rpc.Encoder) rpc.CodecRequest {
+func newCodecRequest(r *http.Request, encoder rpcHttp.Encoder) rpcHttp.CodecRequest {
 	// Decode the request body and check if RPC method is valid.
 	req := new(serverRequest)
 	err := json.NewDecoder(r.Body).Decode(req)
@@ -111,7 +111,7 @@ func newCodecRequest(r *http.Request, encoder rpc.Encoder) rpc.CodecRequest {
 type CodecRequest struct {
 	request *serverRequest
 	err     error
-	encoder rpc.Encoder
+	encoder rpcHttp.Encoder
 }
 
 // Method returns the RPC method for the current request.
@@ -207,7 +207,7 @@ func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, res *serverRes
 		// Not sure in which case will this happen. But seems harmless.
 		if err != nil {
 			log.Println("json Encode:", err.Error())
-			rpc.WriteError(w, 400, err.Error())
+			rpcHttp.WriteError(w, 400, err.Error())
 		}
 	}
 }

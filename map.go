@@ -3,7 +3,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package rpc
+package rpcHttp
 
 import (
 	"fmt"
@@ -30,13 +30,13 @@ type service struct {
 	rcvr     reflect.Value             // receiver of methods for the service
 	rcvrType reflect.Type              // type of the receiver
 	methods  map[string]*serviceMethod // registered methods
-	passReq  bool
 }
 
 type serviceMethod struct {
 	method    reflect.Method // receiver method
 	argsType  reflect.Type   // type of the request argument
 	replyType reflect.Type   // type of the response argument
+	counter   int            // used to record the number of calls
 }
 
 // ----------------------------------------------------------------------------
@@ -50,14 +50,13 @@ type serviceMap struct {
 }
 
 // register adds a new service using reflection to extract its methods.
-func (m *serviceMap) register(rcvr interface{}, name string, passReq bool) error {
+func (m *serviceMap) register(rcvr interface{}, name string) error {
 	// Setup service.
 	s := &service{
 		name:     name,
 		rcvr:     reflect.ValueOf(rcvr),
 		rcvrType: reflect.TypeOf(rcvr),
 		methods:  make(map[string]*serviceMethod),
-		passReq:  passReq,
 	}
 	if name == "" {
 		s.name = reflect.Indirect(s.rcvr).Type().Name()
@@ -73,40 +72,26 @@ func (m *serviceMap) register(rcvr interface{}, name string, passReq bool) error
 	for i := 0; i < s.rcvrType.NumMethod(); i++ {
 		method := s.rcvrType.Method(i)
 		mtype := method.Type
-
-		// offset the parameter indexes by one if the
-		// service methods accept an HTTP request pointer
-		var paramOffset int
-		if passReq {
-			paramOffset = 1
-		} else {
-			paramOffset = 0
-		}
-
 		// Method must be exported.
 		if method.PkgPath != "" {
 			continue
 		}
 		// Method needs four ins: receiver, *http.Request, *args, *reply.
-		if mtype.NumIn() != 3+paramOffset {
+		if mtype.NumIn() != 4 {
 			continue
 		}
-
-		// If the service methods accept an HTTP request pointer
-		if passReq {
-			// First argument must be a pointer and must be http.Request.
-			reqType := mtype.In(1)
-			if reqType.Kind() != reflect.Ptr || reqType.Elem() != typeOfRequest {
-				continue
-			}
+		// First argument must be a pointer and must be http.Request.
+		reqType := mtype.In(1)
+		if reqType.Kind() != reflect.Ptr || reqType.Elem() != typeOfRequest {
+			continue
 		}
-		// Next argument must be a pointer and must be exported.
-		args := mtype.In(1 + paramOffset)
+		// Second argument must be a pointer and must be exported.
+		args := mtype.In(2)
 		if args.Kind() != reflect.Ptr || !isExportedOrBuiltin(args) {
 			continue
 		}
-		// Next argument must be a pointer and must be exported.
-		reply := mtype.In(2 + paramOffset)
+		// Third argument must be a pointer and must be exported.
+		reply := mtype.In(3)
 		if reply.Kind() != reflect.Ptr || !isExportedOrBuiltin(reply) {
 			continue
 		}
@@ -145,6 +130,17 @@ func (m *serviceMap) register(rcvr interface{}, name string, passReq bool) error
 func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 	parts := strings.Split(method, ".")
 	if len(parts) != 2 {
+		// for method name not include period char(.)
+		if len(parts) == 1 {
+			for _, service := range m.services {
+				serviceMethod := service.methods[parts[0]]
+				if serviceMethod == nil {
+					continue
+				}
+				return service, serviceMethod, nil
+			}
+		}
+
 		err := fmt.Errorf("rpc: service/method request ill-formed: %q", method)
 		return nil, nil, err
 	}
@@ -161,6 +157,15 @@ func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 		return nil, nil, err
 	}
 	return service, serviceMethod, nil
+}
+
+func (m *serviceMap) enumMethodInfo() (methodNames []string) {
+	for _, s := range m.services {
+		for mn, mv := range s.methods {
+			methodNames = append(methodNames, fmt.Sprintf(`%v.%v   calls:%v`, s.name, mn, mv.counter))
+		}
+	}
+	return methodNames
 }
 
 // isExported returns true of a string is an exported (upper case) name.
