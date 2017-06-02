@@ -148,6 +148,7 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 			// array containing the request struct.
 			params := [1]interface{}{args}
 			if err = json.Unmarshal(*c.request.Params, &params); err != nil {
+				log.Printf("ERROR: %s", string(*c.request.Params))
 				c.err = &Error{
 					Code:    E_INVALID_REQ,
 					Message: err.Error(),

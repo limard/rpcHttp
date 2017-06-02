@@ -97,6 +97,15 @@ func (s *Server) EnumMethodInfo() []string {
 	return s.services.enumMethodInfo()
 }
 
+func (s *Server) MethodPage(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("JsonRpc method:\n"))
+	names := s.EnumMethodInfo()
+	count := len(names)
+	for i := 0; i < count; i++ {
+		w.Write([]byte(names[i] + "\n"))
+	}
+}
+
 // ServeHTTP
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {

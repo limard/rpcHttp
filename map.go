@@ -162,7 +162,7 @@ func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 func (m *serviceMap) enumMethodInfo() (methodNames []string) {
 	for _, s := range m.services {
 		for mn, mv := range s.methods {
-			methodNames = append(methodNames, fmt.Sprintf(`%v.%v   calls:%v`, s.name, mn, mv.counter))
+			methodNames = append(methodNames, fmt.Sprintf(`%v.%v(calls:%v)`, s.name, mn, mv.counter))
 		}
 	}
 	return methodNames
