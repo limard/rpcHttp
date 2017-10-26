@@ -35,6 +35,7 @@ type clientRequest struct {
 
 // clientResponse represents a JSON-RPC response returned to a client.
 type clientResponse struct {
+	Id      interface{}      `json:"id"`
 	Version string           `json:"jsonrpc"`
 	Result  *json.RawMessage `json:"result"`
 	Error   *json.RawMessage `json:"error"`
@@ -53,39 +54,41 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 
 // DecodeClientResponse decodes the response body of a client request into
 // the interface reply.
-func DecodeClientResponse(r io.Reader, reply interface{}) error {
+func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error, err error) {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
-		return err
+		return nil, err
 	}
+
+	// Error
 	if c.Error != nil {
 		jsonErr := &Error{}
 		if err := json.Unmarshal(*c.Error, jsonErr); err != nil {
-			return &Error{
+			return nil, &Error{
 				Code:    E_SERVER,
 				Message: string(*c.Error),
 			}
 		}
-		return jsonErr
+		return jsonErr, nil
 	}
 
+	// Result
 	if c.Result == nil {
-		return ErrNullResult
+		return nil, ErrNullResult
 	}
-
-	return json.Unmarshal(*c.Result, reply)
+	return nil, json.Unmarshal(*c.Result, reply)
 }
 
-func Call(url string, method string, request interface{}, reply interface{}) error {
+func Call(url string, method string, request interface{}, reply interface{}) (replyError *Error, err error) {
 	jsonReqBuf, err := EncodeClientRequest(method, request)
 	if err != nil {
-		return err
+		return
 	}
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
 	rsp, err := http.Post(url, `application/json`, jsonReqBufR)
 	if err != nil {
-		return err
+		return
 	}
 	defer rsp.Body.Close()
 
