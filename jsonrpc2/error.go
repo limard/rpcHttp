@@ -7,6 +7,7 @@ package jsonrpc2
 
 import (
 	"errors"
+	"encoding/json"
 )
 
 type ErrorCode int
@@ -35,5 +36,6 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return e.Message
+	b, _ := json.Marshal(e)
+	return string(b)
 }
