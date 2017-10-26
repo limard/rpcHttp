@@ -54,6 +54,7 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 
 // DecodeClientResponse decodes the response body of a client request into
 // the interface reply.
+<<<<<<< HEAD
 func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error) {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
@@ -61,10 +62,17 @@ func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error) {
 			Code:    E_PARSE,
 			Message: err.Error()}
 		return
+=======
+func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error, err error) {
+	var c clientResponse
+	if err := json.NewDecoder(r).Decode(&c); err != nil {
+		return nil, err
+>>>>>>> 08d48d6aa4f5f44f8ad58d1495db7936f983dbe7
 	}
 
 	// Error
 	if c.Error != nil {
+<<<<<<< HEAD
 		replyError = &Error{}
 		if err := json.Unmarshal(*c.Error, replyError); err != nil {
 			replyError = &Error{
@@ -73,10 +81,21 @@ func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error) {
 			}
 		}
 		return replyError
+=======
+		jsonErr := &Error{}
+		if err := json.Unmarshal(*c.Error, jsonErr); err != nil {
+			return nil, &Error{
+				Code:    E_SERVER,
+				Message: string(*c.Error),
+			}
+		}
+		return jsonErr, nil
+>>>>>>> 08d48d6aa4f5f44f8ad58d1495db7936f983dbe7
 	}
 
 	// Result
 	if c.Result == nil {
+<<<<<<< HEAD
 		replyError = &Error{
 			Code:    E_BAD_PARAMS,
 			Message: ErrNullResult.Error(),
@@ -99,15 +118,28 @@ func Call(url string, method string, request interface{}, reply interface{}) (re
 		replyError = &Error{
 			Code:    E_INVALID_REQ,
 			Message: err.Error()}
+=======
+		return nil, ErrNullResult
+	}
+	return nil, json.Unmarshal(*c.Result, reply)
+}
+
+func Call(url string, method string, request interface{}, reply interface{}) (replyError *Error, err error) {
+	jsonReqBuf, err := EncodeClientRequest(method, request)
+	if err != nil {
+>>>>>>> 08d48d6aa4f5f44f8ad58d1495db7936f983dbe7
 		return
 	}
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
 	rsp, err := http.Post(url, `application/json`, jsonReqBufR)
 	if err != nil {
+<<<<<<< HEAD
 		replyError = &Error{
 			Code:    E_SERVER,
 			Message: err.Error()}
+=======
+>>>>>>> 08d48d6aa4f5f44f8ad58d1495db7936f983dbe7
 		return
 	}
 	defer rsp.Body.Close()
