@@ -195,7 +195,7 @@ func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, res *serverRes
 
 		var buffer []byte
 		var err error
-		buffer, err = json.Marshal(c.request)
+		//buffer, err = json.Marshal(c.request)
 		// log.Println("Request:", string(buffer))
 
 		buffer, err = json.Marshal(res)

@@ -41,8 +41,8 @@ type clientResponse struct {
 	Error   *json.RawMessage `json:"error"`
 }
 
-// EncodeClientRequest encodes parameters for a JSON-RPC client request.
-func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
+// encodeClientRequest encodes parameters for a JSON-RPC client request.
+func encodeClientRequest(method string, args interface{}) ([]byte, error) {
 	c := &clientRequest{
 		Version: "2.0",
 		Method:  method,
@@ -52,9 +52,9 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 	return json.Marshal(c)
 }
 
-// DecodeClientResponse decodes the response body of a client request into
+// decodeClientResponse decodes the response body of a client request into
 // the interface reply.
-func DecodeClientResponse(r io.Reader, reply interface{}) (e error) {
+func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
 		return &Error{
@@ -92,7 +92,7 @@ func DecodeClientResponse(r io.Reader, reply interface{}) (e error) {
 }
 
 func Call(url string, method string, request interface{}, reply interface{}) (e error) {
-	jsonReqBuf, err := EncodeClientRequest(method, request)
+	jsonReqBuf, err := encodeClientRequest(method, request)
 	if err != nil {
 		return &Error{
 			Code:    E_INVALID_REQ,
@@ -109,7 +109,7 @@ func Call(url string, method string, request interface{}, reply interface{}) (e 
 
 	defer rsp.Body.Close()
 
-	return DecodeClientResponse(rsp.Body, reply)
+	return decodeClientResponse(rsp.Body, reply)
 }
 
 func ConvertError(err error) (replyError *Error) {

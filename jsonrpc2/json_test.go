@@ -114,7 +114,7 @@ func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) e
 		t.Fatal("Expected to be registered:", method)
 	}
 
-	buf, _ := EncodeClientRequest(method, req)
+	buf, _ := encodeClientRequest(method, req)
 	body := bytes.NewBuffer(buf)
 	r, _ := http.NewRequest("POST", "http://localhost:8080/", body)
 	r.Header.Set("Content-Type", "application/json")
@@ -122,7 +122,7 @@ func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) e
 	w := NewRecorder()
 	s.ServeHTTP(w, r)
 
-	return DecodeClientResponse(w.Body, res)
+	return decodeClientResponse(w.Body, res)
 }
 
 func executeRaw(t *testing.T, s *rpc.Server, req interface{}, res interface{}) error {
@@ -133,7 +133,7 @@ func executeRaw(t *testing.T, s *rpc.Server, req interface{}, res interface{}) e
 	w := NewRecorder()
 	s.ServeHTTP(w, r)
 
-	return DecodeClientResponse(w.Body, res)
+	return decodeClientResponse(w.Body, res)
 }
 
 func TestService(t *testing.T) {
@@ -189,7 +189,7 @@ func TestDecodeNullResult(t *testing.T) {
 	reader := bytes.NewReader([]byte(data))
 	var result interface{}
 
-	err := DecodeClientResponse(reader, &result)
+	err := decodeClientResponse(reader, &result)
 
 	if err != ErrNullResult {
 		t.Error("Expected err no be ErrNullResult, but got:", err)
