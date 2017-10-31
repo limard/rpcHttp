@@ -54,20 +54,19 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 
 // DecodeClientResponse decodes the response body of a client request into
 // the interface reply.
-func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error) {
+func DecodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
-		replyError = &Error{
+		return &Error{
 			Code:    E_PARSE,
 			Message: err.Error()}
-		return
 	}
 
 	// Error
 	if c.Error != nil {
-		replyError = &Error{}
+		replyError := &Error{}
 		if err := json.Unmarshal(*c.Error, replyError); err != nil {
-			replyError = &Error{
+			return &Error{
 				Code:    E_PARSE,
 				Message: string(*c.Error),
 			}
@@ -77,40 +76,46 @@ func DecodeClientResponse(r io.Reader, reply interface{}) (replyError *Error) {
 
 	// Result
 	if c.Result == nil {
-		replyError = &Error{
+		return &Error{
 			Code:    E_BAD_PARAMS,
 			Message: ErrNullResult.Error(),
 		}
-		return
 	}
 	if err := json.Unmarshal(*c.Result, reply); err != nil {
-		replyError = &Error{
+		return &Error{
 			Code:    E_PARSE,
 			Message: err.Error(),
 		}
-		return
 	}
-	return
+
+	return nil
 }
 
-func Call(url string, method string, request interface{}, reply interface{}) (replyError *Error) {
+func Call(url string, method string, request interface{}, reply interface{}) (e error) {
 	jsonReqBuf, err := EncodeClientRequest(method, request)
 	if err != nil {
-		replyError = &Error{
+		return &Error{
 			Code:    E_INVALID_REQ,
 			Message: err.Error()}
-		return
 	}
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
 	rsp, err := http.Post(url, `application/json`, jsonReqBufR)
 	if err != nil {
-		replyError = &Error{
+		return &Error{
 			Code:    E_SERVER,
 			Message: err.Error()}
-		return
 	}
+
 	defer rsp.Body.Close()
 
 	return DecodeClientResponse(rsp.Body, reply)
+}
+
+func ConvertError(err error) (replyError *Error) {
+	replyError = new(Error)
+
+	b, _ := json.Marshal(err)
+	json.Unmarshal(b, replyError)
+	return
 }
