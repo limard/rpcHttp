@@ -2,10 +2,11 @@ package msgpackrpc
 
 import (
 	"bytes"
-	"github.com/vmihailenco/msgpack"
 	"io"
 	"math/rand"
 	"net/http"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 // clientRequest represents a JSON-RPC request sent by a client.
@@ -13,15 +14,15 @@ type clientRequest struct {
 	Version string      `msgpack:"msgpackrpc"`
 	Method  string      `msgpack:"method"`
 	Params  interface{} `msgpack:"params"`
-	Id      uint64      `msgpack:"id"`
+	Id      interface{} `msgpack:"id"`
 }
 
 // clientResponse represents a JSON-RPC response returned to a client.
 type clientResponse struct {
 	Id      interface{} `msgpack:"id"`
-	Version string      `msgpack:"jsonrpc"`
-	Result  *[]byte     `msgpack:"result"`
-	Error   *[]byte     `msgpack:"error"`
+	Version string      `msgpack:"msgpackrpc"`
+	Result  interface{} `msgpack:"result"`
+	Error   interface{} `msgpack:"error"`
 }
 
 func encodeClientRequest(method string, args interface{}) ([]byte, error) {
@@ -45,10 +46,11 @@ func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	// Error
 	if c.Error != nil {
 		replyError := &Error{}
-		if err := msgpack.Unmarshal(*c.Error, replyError); err != nil {
+		tempBuf, _ := msgpack.Marshal(c.Error)
+		if err := msgpack.Unmarshal(tempBuf, replyError); err != nil {
 			return &Error{
 				Code:    E_PARSE,
-				Message: string(*c.Error),
+				Message: string(tempBuf),
 			}
 		}
 		return replyError
@@ -61,7 +63,8 @@ func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 			Message: "result is null",
 		}
 	}
-	if err := msgpack.Unmarshal(*c.Result, reply); err != nil {
+	tempBuf, _ := msgpack.Marshal(c.Result)
+	if err := msgpack.Unmarshal(tempBuf, reply); err != nil {
 		return &Error{
 			Code:    E_PARSE,
 			Message: err.Error(),

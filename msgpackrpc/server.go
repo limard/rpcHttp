@@ -3,8 +3,8 @@ package msgpackrpc
 import (
 	"github.com/Limard/rpcHttp"
 	"github.com/vmihailenco/msgpack"
-	"net/http"
 	"log"
+	"net/http"
 )
 
 func NewCodec() *Codec {
@@ -17,17 +17,17 @@ type Codec struct {
 }
 
 type serverRequest struct {
-	Version string  `msgpack:"msgpackrpc"`
-	Method  string  `msgpack:"method"`
-	Params  *[]byte `msgpack:"params"`
-	Id      *[]byte `msgpack:"id"`
+	Version string      `msgpack:"msgpackrpc"`
+	Method  string      `msgpack:"method"`
+	Params  interface{} `msgpack:"params"`
+	Id      interface{} `msgpack:"id"`
 }
 
 type serverResponse struct {
-	Version string      `msgpack:"jsonrpc"`
+	Version string      `msgpack:"msgpackrpc"`
 	Result  interface{} `msgpack:"result,omitempty"`
-	Error   *Error      `msgpack:"error,omitempty"`
-	Id      *[]byte     `msgpack:"id"`
+	Error   interface{} `msgpack:"error,omitempty"`
+	Id      interface{} `msgpack:"id"`
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpcHttp.CodecRequest {
@@ -59,10 +59,11 @@ func (c *CodecRequest) Method() (string, error) {
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
 	if c.err == nil && c.request.Params != nil {
-		if err := msgpack.Unmarshal(*c.request.Params, args); err != nil {
+		tempBuf, _ := msgpack.Marshal(c.request.Params)
+		if err := msgpack.Unmarshal(tempBuf, args); err != nil {
 			params := [1]interface{}{args}
-			if err = msgpack.Unmarshal(*c.request.Params, &params); err != nil {
-				log.Printf("ERROR: %s", string(*c.request.Params))
+			if err = msgpack.Unmarshal(tempBuf, &params); err != nil {
+				log.Printf("ERROR: %s", string(tempBuf))
 				c.err = &Error{
 					Code:    E_INVALID_REQ,
 					Message: err.Error(),
@@ -85,16 +86,16 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, reply interface{}) {
 }
 
 func (c *CodecRequest) WriteError(w http.ResponseWriter, status int, err error) {
-	jsonErr, ok := err.(*Error)
+	objErr, ok := err.(*Error)
 	if !ok {
-		jsonErr = &Error{
+		objErr = &Error{
 			Code:    E_SERVER,
 			Message: err.Error(),
 		}
 	}
 	res := &serverResponse{
 		Version: "1.0",
-		Error:   jsonErr,
+		Error:   objErr,
 		Id:      c.request.Id,
 	}
 	c.writeServerResponse(w, res)
