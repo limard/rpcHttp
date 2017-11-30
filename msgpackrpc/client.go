@@ -9,6 +9,8 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
+var ContentType = `application/msgpack`
+
 // clientRequest represents a JSON-RPC request sent by a client.
 type clientRequest struct {
 	Version string      `msgpack:"msgpackrpc"`
@@ -83,7 +85,7 @@ func Call(url string, method string, request interface{}, reply interface{}) (e 
 	}
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
-	rsp, err := http.Post(url, `application/msgpack`, jsonReqBufR)
+	rsp, err := http.Post(url, ContentType, jsonReqBufR)
 	if err != nil {
 		return &Error{
 			Code:    E_SERVER,

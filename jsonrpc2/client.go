@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+var ContentType = `application/json`
+
 // ----------------------------------------------------------------------------
 // Request and Response
 // ----------------------------------------------------------------------------
@@ -100,7 +102,7 @@ func Call(url string, method string, request interface{}, reply interface{}) (e 
 	}
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
-	rsp, err := http.Post(url, `application/json`, jsonReqBufR)
+	rsp, err := http.Post(url, ContentType, jsonReqBufR)
 	if err != nil {
 		return &Error{
 			Code:    E_SERVER,
