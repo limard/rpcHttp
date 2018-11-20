@@ -5,8 +5,8 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-
-	"github.com/pkg/bson"
+	"gopkg.in/mgo.v2/bson"
+	"io/ioutil"
 )
 
 var ContentType = `application/bson`
@@ -39,10 +39,13 @@ func encodeClientRequest(method string, args interface{}) ([]byte, error) {
 
 func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	var c clientResponse
-	if err := bson.NewDecoder(r).Decode(&c); err != nil {
-		return &Error{
-			Code:    E_PARSE,
-			Message: err.Error()}
+	buf, e := ioutil.ReadAll(r)
+	if e != nil {
+		return e
+	}
+	e = bson.Unmarshal(buf, &c)
+	if e != nil {
+		return e
 	}
 
 	// Error

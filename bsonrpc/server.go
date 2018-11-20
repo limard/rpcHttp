@@ -4,7 +4,8 @@ import (
 	"github.com/Limard/rpcHttp"
 	"log"
 	"net/http"
-	"github.com/pkg/bson"
+	"gopkg.in/mgo.v2/bson"
+	"io/ioutil"
 )
 
 func NewCodec() *Codec {
@@ -31,12 +32,21 @@ type serverResponse struct {
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpcHttp.CodecRequest {
+	var err error
 	req := new(serverRequest)
-	err := bson.NewDecoder(r.Body).Decode(req)
-	if err != nil {
+	buf, e := ioutil.ReadAll(r.Body)
+	if e != nil {
 		err = &Error{
 			Code:    E_PARSE,
-			Message: err.Error(),
+			Message: e.Error(),
+			Data:    req,
+		}
+	}
+	e = bson.Unmarshal(buf, &req)
+	if e != nil {
+		err = &Error{
+			Code:    E_PARSE,
+			Message: e.Error(),
 			Data:    req,
 		}
 	}
