@@ -11,6 +11,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"fmt"
 )
 
 var ContentType = `application/json`
@@ -59,6 +60,7 @@ func encodeClientRequest(method string, args interface{}) ([]byte, error) {
 func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	var c clientResponse
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
+		fmt.Println("decodeClientResponse.json.NewDecoder:", err)
 		return &Error{
 			Code:    E_PARSE,
 			Message: err.Error()}
@@ -68,6 +70,7 @@ func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 	if c.Error != nil {
 		replyError := &Error{}
 		if err := json.Unmarshal(*c.Error, replyError); err != nil {
+			fmt.Println("decodeClientResponse.json.Unmarshal:", e)
 			return &Error{
 				Code:    E_PARSE,
 				Message: string(*c.Error),
@@ -96,6 +99,7 @@ func decodeClientResponse(r io.Reader, reply interface{}) (e error) {
 func Call(url string, method string, request interface{}, reply interface{}) (e error) {
 	jsonReqBuf, err := encodeClientRequest(method, request)
 	if err != nil {
+		fmt.Println("encodeClientRequest:", e)
 		return &Error{
 			Code:    E_INVALID_REQ,
 			Message: err.Error()}
@@ -104,6 +108,7 @@ func Call(url string, method string, request interface{}, reply interface{}) (e 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
 	rsp, err := http.Post(url, ContentType, jsonReqBufR)
 	if err != nil {
+		fmt.Println("http.Post:", e)
 		return &Error{
 			Code:    E_SERVER,
 			Message: err.Error()}

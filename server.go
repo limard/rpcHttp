@@ -98,7 +98,7 @@ func (s *Server) EnumMethodInfo() []string {
 }
 
 func (s *Server) MethodPage(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("JsonRpc method:\n"))
+	w.Write([]byte("Method:\n"))
 	names := s.EnumMethodInfo()
 	count := len(names)
 	for i := 0; i < count; i++ {
