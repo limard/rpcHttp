@@ -45,8 +45,9 @@ type serviceMethod struct {
 
 // serviceMap is a registry for services.
 type serviceMap struct {
-	mutex    sync.Mutex
-	services map[string]*service
+	mutex            sync.Mutex
+	services         map[string]*service
+	methodIgnoreCase bool
 }
 
 // register adds a new service using reflection to extract its methods.
@@ -102,11 +103,20 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 		if returnType := mtype.Out(0); returnType != typeOfError {
 			continue
 		}
-		s.methods[method.Name] = &serviceMethod{
-			method:    method,
-			argsType:  args.Elem(),
-			replyType: reply.Elem(),
+		if m.methodIgnoreCase {
+			s.methods[strings.ToLower(method.Name)] = &serviceMethod{
+				method:    method,
+				argsType:  args.Elem(),
+				replyType: reply.Elem(),
+			}
+		} else {
+			s.methods[method.Name] = &serviceMethod{
+				method:    method,
+				argsType:  args.Elem(),
+				replyType: reply.Elem(),
+			}
 		}
+
 	}
 	if len(s.methods) == 0 {
 		return fmt.Errorf("rpc: %q has no exported methods of suitable type",
@@ -120,7 +130,11 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 	} else if _, ok := m.services[s.name]; ok {
 		return fmt.Errorf("rpc: service already defined: %q", s.name)
 	}
-	m.services[s.name] = s
+	if m.methodIgnoreCase {
+		m.services[strings.ToLower(s.name)] = s
+	} else {
+		m.services[s.name] = s
+	}
 	return nil
 }
 
@@ -128,6 +142,9 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 //
 // The method name uses a dotted notation as in "Service.Method".
 func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
+	if m.methodIgnoreCase {
+		method = strings.ToLower(method)
+	}
 	parts := strings.Split(method, ".")
 	if len(parts) != 2 {
 		// for method name not include period char(.)

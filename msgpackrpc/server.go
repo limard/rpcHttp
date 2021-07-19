@@ -1,7 +1,7 @@
 package msgpackrpc
 
 import (
-	"github.com/Limard/rpcHttp"
+	"bissoft/rpcHttp"
 	"github.com/vmihailenco/msgpack"
 	"log"
 	"net/http"

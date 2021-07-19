@@ -8,10 +8,10 @@ package jsonrpc2
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
-	"fmt"
 )
 
 var ContentType = `application/json`
@@ -107,6 +107,29 @@ func Call(url string, method string, request interface{}, reply interface{}) (e 
 
 	jsonReqBufR := bytes.NewReader(jsonReqBuf)
 	rsp, err := http.Post(url, ContentType, jsonReqBufR)
+	if err != nil {
+		fmt.Println("http.Post:", e)
+		return &Error{
+			Code:    E_SERVER,
+			Message: err.Error()}
+	}
+
+	defer rsp.Body.Close()
+
+	return decodeClientResponse(rsp.Body, reply)
+}
+
+func CallEx(client *http.Client, url string, method string, request interface{}, reply interface{}) (e error) {
+	jsonReqBuf, err := encodeClientRequest(method, request)
+	if err != nil {
+		fmt.Println("encodeClientRequest:", e)
+		return &Error{
+			Code:    E_INVALID_REQ,
+			Message: err.Error()}
+	}
+
+	jsonReqBufR := bytes.NewReader(jsonReqBuf)
+	rsp, err := client.Post(url, ContentType, jsonReqBufR)
 	if err != nil {
 		fmt.Println("http.Post:", e)
 		return &Error{

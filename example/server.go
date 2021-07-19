@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bissoft/rpcHttp"
+	"bissoft/rpcHttp/bsonrpc"
+	"bissoft/rpcHttp/jsonrpc2"
+	"bissoft/rpcHttp/msgpackrpc"
 	"fmt"
-	"github.com/Limard/rpcHttp"
-	"github.com/Limard/rpcHttp/bsonrpc"
-	"github.com/Limard/rpcHttp/jsonrpc2"
-	"github.com/Limard/rpcHttp/msgpackrpc"
 	"net"
 	"net/http"
 )

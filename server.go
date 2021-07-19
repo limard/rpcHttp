@@ -42,15 +42,27 @@ type CodecRequest interface {
 // NewServer returns a new RPC server.
 func NewServer() *Server {
 	return &Server{
-		codecs:   make(map[string]Codec),
-		services: new(serviceMap),
+		codecs:         make(map[string]Codec),
+		services:       new(serviceMap),
+		postMethodOnly: true,
 	}
 }
 
 // Server serves registered RPC services using registered codecs.
 type Server struct {
-	codecs   map[string]Codec
-	services *serviceMap
+	codecs           map[string]Codec
+	services         *serviceMap
+	methodIgnoreCase bool
+	postMethodOnly   bool
+}
+
+func (s *Server) SetPostMethodOnly(postMethodOnly bool) {
+	s.postMethodOnly = postMethodOnly
+}
+
+func (s *Server) SetMethodIgnoreCase(ignoreCase bool) {
+	s.methodIgnoreCase = ignoreCase
+	s.services.methodIgnoreCase = ignoreCase
 }
 
 // RegisterCodec adds a new codec to the server.
@@ -108,11 +120,15 @@ func (s *Server) MethodPage(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		log.Printf("POST method required, Current: %s", r.Method)
-		WriteError(w, 405, "rpc: POST method required, received "+r.Method)
-		return
+
+	if s.postMethodOnly {
+		if r.Method != "POST" {
+			log.Printf("POST method required, Current: %s", r.Method)
+			WriteError(w, 405, "rpc: POST method required, received "+r.Method)
+			return
+		}
 	}
+
 	contentType := r.Header.Get("Content-Type")
 	idx := strings.Index(contentType, ";")
 	if idx != -1 {
