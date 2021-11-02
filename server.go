@@ -109,6 +109,10 @@ func (s *Server) EnumMethodInfo() []string {
 	return s.services.enumMethodInfo()
 }
 
+func (s *Server) EnumMethod() []string {
+	return s.services.enumMethod()
+}
+
 func (s *Server) MethodPage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Method:\n"))
 	names := s.EnumMethodInfo()
@@ -171,12 +175,25 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Call the service method.
 	reply := reflect.New(methodSpec.replyType)
 	methodSpec.counter++
-	errValue := methodSpec.method.Func.Call([]reflect.Value{
-		serviceSpec.rcvr,
-		reflect.ValueOf(r),
-		args,
-		reply,
-	})
+
+	params := make([]reflect.Value, 0)
+	params = append(params, serviceSpec.rcvr)
+	if methodSpec.hasHttpReq {
+		params = append(params, reflect.ValueOf(r))
+		if methodSpec.hasHttpRes {
+			params = append(params, reflect.ValueOf(w))
+		}
+	}
+	params = append(params, args)
+	params = append(params, reply)
+
+	errValue := methodSpec.method.Func.Call(params)
+	//errValue := methodSpec.method.Func.Call([]reflect.Value{
+	//	serviceSpec.rcvr,
+	//	reflect.ValueOf(r),
+	//	args,
+	//	reply,
+	//})
 	// Cast the result to error if needed.
 	var errResult error
 	errInter := errValue[0].Interface()

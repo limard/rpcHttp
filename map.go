@@ -17,8 +17,9 @@ import (
 
 var (
 	// Precompute the reflect.Type of error and http.Request
-	typeOfError   = reflect.TypeOf((*error)(nil)).Elem()
-	typeOfRequest = reflect.TypeOf((*http.Request)(nil)).Elem()
+	typeOfError          = reflect.TypeOf((*error)(nil)).Elem()
+	typeOfRequest        = reflect.TypeOf((*http.Request)(nil)).Elem()
+	typeOfResponseWriter = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
 )
 
 // ----------------------------------------------------------------------------
@@ -33,10 +34,12 @@ type service struct {
 }
 
 type serviceMethod struct {
-	method    reflect.Method // receiver method
-	argsType  reflect.Type   // type of the request argument
-	replyType reflect.Type   // type of the response argument
-	counter   int            // used to record the number of calls
+	method     reflect.Method // receiver method
+	hasHttpReq bool
+	hasHttpRes bool
+	argsType   reflect.Type // type of the request argument
+	replyType  reflect.Type // type of the response argument
+	counter    int          // used to record the number of calls
 }
 
 // ----------------------------------------------------------------------------
@@ -77,25 +80,57 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 		if method.PkgPath != "" {
 			continue
 		}
-		// Method needs four ins: receiver, *http.Request, *args, *reply.
-		if mtype.NumIn() != 4 {
+		// Method needs three ins: receiver, *args, *reply.
+		// or Method needs four ins: receiver, *http.Request, *args, *reply.
+		// or Method needs five ins: receiver, *http.Request, *http.Response, *args, *reply.
+
+		var hasHttpReq bool
+		var hasHttpRes bool
+		if mtype.NumIn() == 3 {
+			hasHttpReq = false
+			hasHttpRes = false
+		} else if mtype.NumIn() == 4 {
+			hasHttpReq = true
+			hasHttpRes = false
+		} else if mtype.NumIn() == 5 {
+			hasHttpReq = true
+			hasHttpRes = true
+		} else {
 			continue
 		}
-		// First argument must be a pointer and must be http.Request.
-		reqType := mtype.In(1)
-		if reqType.Kind() != reflect.Ptr || reqType.Elem() != typeOfRequest {
-			continue
+
+		argIndex := 1
+
+		if hasHttpReq {
+			// First argument must be a pointer and must be http.Request.
+			reqType := mtype.In(argIndex)
+			if reqType.Kind() != reflect.Ptr || reqType.Elem() != typeOfRequest {
+				continue
+			}
+			argIndex++
+		}
+
+		if hasHttpRes {
+			// First argument must be a pointer and must be http.Request.
+			reqType := mtype.In(argIndex)
+			//if reqType.Kind() != reflect.Ptr || reqType.Elem() != typeOfResponseWriter {
+			if reqType != typeOfResponseWriter {
+				continue
+			}
+			argIndex++
 		}
 		// Second argument must be a pointer and must be exported.
-		args := mtype.In(2)
+		args := mtype.In(argIndex)
 		if args.Kind() != reflect.Ptr || !isExportedOrBuiltin(args) {
 			continue
 		}
+		argIndex++
 		// Third argument must be a pointer and must be exported.
-		reply := mtype.In(3)
+		reply := mtype.In(argIndex)
 		if reply.Kind() != reflect.Ptr || !isExportedOrBuiltin(reply) {
 			continue
 		}
+		argIndex++
 		// Method needs one out: error.
 		if mtype.NumOut() != 1 {
 			continue
@@ -105,15 +140,19 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 		}
 		if m.methodIgnoreCase {
 			s.methods[strings.ToLower(method.Name)] = &serviceMethod{
-				method:    method,
-				argsType:  args.Elem(),
-				replyType: reply.Elem(),
+				method:     method,
+				argsType:   args.Elem(),
+				replyType:  reply.Elem(),
+				hasHttpRes: hasHttpRes,
+				hasHttpReq: hasHttpReq,
 			}
 		} else {
 			s.methods[method.Name] = &serviceMethod{
-				method:    method,
-				argsType:  args.Elem(),
-				replyType: reply.Elem(),
+				method:     method,
+				argsType:   args.Elem(),
+				replyType:  reply.Elem(),
+				hasHttpRes: hasHttpRes,
+				hasHttpReq: hasHttpReq,
 			}
 		}
 
@@ -142,6 +181,7 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 //
 // The method name uses a dotted notation as in "Service.Method".
 func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
+	methodForDisplay := method
 	if m.methodIgnoreCase {
 		method = strings.ToLower(method)
 	}
@@ -165,12 +205,12 @@ func (m *serviceMap) get(method string) (*service, *serviceMethod, error) {
 	service := m.services[parts[0]]
 	m.mutex.Unlock()
 	if service == nil {
-		err := fmt.Errorf("rpc: can't find service %q", method)
+		err := fmt.Errorf("rpc: can't find service %q", methodForDisplay)
 		return nil, nil, err
 	}
 	serviceMethod := service.methods[parts[1]]
 	if serviceMethod == nil {
-		err := fmt.Errorf("rpc: can't find method %q", method)
+		err := fmt.Errorf("rpc: can't find method %q", methodForDisplay)
 		return nil, nil, err
 	}
 	return service, serviceMethod, nil
@@ -180,6 +220,15 @@ func (m *serviceMap) enumMethodInfo() (methodNames []string) {
 	for _, s := range m.services {
 		for mn, mv := range s.methods {
 			methodNames = append(methodNames, fmt.Sprintf(`%v.%v(calls:%v)`, s.name, mn, mv.counter))
+		}
+	}
+	return methodNames
+}
+
+func (m *serviceMap) enumMethod() (methodNames []string) {
+	for _, s := range m.services {
+		for _, mv := range s.methods {
+			methodNames = append(methodNames, fmt.Sprintf(`%s.%s`, s.name, mv.method.Name))
 		}
 	}
 	return methodNames
