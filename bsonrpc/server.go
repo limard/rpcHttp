@@ -2,10 +2,11 @@ package bsonrpc
 
 import (
 	"bissoft/rpcHttp"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 func NewCodec() *Codec {
@@ -95,12 +96,13 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, reply interface{}) {
 	c.writeServerResponse(w, res)
 }
 
-func (c *CodecRequest) WriteError(w http.ResponseWriter, status int, err error) {
+func (c *CodecRequest) WriteErrorResponse(w http.ResponseWriter, code int, err error, data interface{}) {
 	objErr, ok := err.(*Error)
 	if !ok {
 		objErr = &Error{
-			Code:    E_SERVER,
+			Code:    code,
 			Message: err.Error(),
+			Data:    data,
 		}
 	}
 	res := &serverResponse{

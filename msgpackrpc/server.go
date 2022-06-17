@@ -2,9 +2,10 @@ package msgpackrpc
 
 import (
 	"bissoft/rpcHttp"
-	"github.com/vmihailenco/msgpack"
 	"log"
 	"net/http"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 func NewCodec() *Codec {
@@ -85,12 +86,13 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, reply interface{}) {
 	c.writeServerResponse(w, res)
 }
 
-func (c *CodecRequest) WriteError(w http.ResponseWriter, status int, err error) {
+func (c *CodecRequest) WriteErrorResponse(w http.ResponseWriter, code int, err error, data interface{}) {
 	objErr, ok := err.(*Error)
 	if !ok {
 		objErr = &Error{
-			Code:    E_SERVER,
+			Code:    code,
 			Message: err.Error(),
+			Data:    data,
 		}
 	}
 	res := &serverResponse{

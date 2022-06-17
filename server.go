@@ -32,8 +32,17 @@ type CodecRequest interface {
 	// Writes the response using the RPC method reply.
 	WriteResponse(http.ResponseWriter, interface{})
 	// Writes an error produced by the server.
-	WriteError(w http.ResponseWriter, status int, err error)
+	WriteErrorResponse(w http.ResponseWriter, status int, err error, data interface{})
 }
+
+const (
+	E_PARSE       = -32700
+	E_INVALID_REQ = -32600
+	E_NO_METHOD   = -32601
+	E_BAD_PARAMS  = -32602
+	E_INTERNAL    = -32603
+	E_SERVER      = -32000
+)
 
 // ----------------------------------------------------------------------------
 // Server
@@ -156,20 +165,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method, errMethod := codecReq.Method()
 	if errMethod != nil {
 		log.Println("errMethod", errMethod)
-		codecReq.WriteError(w, 400, errMethod)
+		codecReq.WriteErrorResponse(w, 400, errMethod, nil)
 		return
 	}
 	serviceSpec, methodSpec, errGet := s.services.get(method)
 	if errGet != nil {
 		log.Println("errGet", errGet)
-		codecReq.WriteError(w, 400, errGet)
+		codecReq.WriteErrorResponse(w, 400, errGet, nil)
 		return
 	}
 	// Decode the args.
 	args := reflect.New(methodSpec.argsType)
 	if errRead := codecReq.ReadRequest(args.Interface()); errRead != nil {
 		log.Println("errRead", errRead)
-		codecReq.WriteError(w, 400, errRead)
+		codecReq.WriteErrorResponse(w, 400, errRead, nil)
 		return
 	}
 	// Call the service method.
@@ -187,29 +196,44 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	params = append(params, args)
 	params = append(params, reply)
 
-	errValue := methodSpec.method.Func.Call(params)
-	//errValue := methodSpec.method.Func.Call([]reflect.Value{
-	//	serviceSpec.rcvr,
-	//	reflect.ValueOf(r),
-	//	args,
-	//	reply,
-	//})
+	resValue := methodSpec.method.Func.Call(params)
+
 	// Cast the result to error if needed.
+	errCode := E_SERVER
 	var errResult error
-	errInter := errValue[0].Interface()
-	if errInter != nil {
-		errResult = errInter.(error)
+	var errData interface{}
+	if len(resValue) == 1 {
+		errInter := resValue[0].Interface()
+		if errInter != nil {
+			errResult = errInter.(error)
+		}
+	} else if len(resValue) == 2 {
+		errCode = int(resValue[0].Int())
+		errInter := resValue[1].Interface()
+		if errInter != nil {
+			errResult = errInter.(error)
+		}
+	} else {
+		errCode = int(resValue[0].Int())
+		errInter := resValue[1].Interface()
+		if errInter != nil {
+			errResult = errInter.(error)
+		}
+		errData = resValue[2].Interface()
 	}
+
 	// Prevents Internet Explorer from MIME-sniffing a response away
 	// from the declared content-type
 	w.Header().Set("x-content-type-options", "nosniff")
 	// Encode the response.
 	if errResult == nil {
+		// success response
 		codecReq.WriteResponse(w, reply.Interface())
-	} else {
-		log.Println("write err:", errResult)
-		codecReq.WriteError(w, 400, errResult)
+		return
 	}
+	// error response
+	log.Println("write err:", errResult)
+	codecReq.WriteErrorResponse(w, errCode, errResult, errData)
 }
 
 func WriteError(w http.ResponseWriter, status int, msg string) {

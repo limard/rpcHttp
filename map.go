@@ -131,13 +131,34 @@ func (m *serviceMap) register(rcvr interface{}, name string) error {
 			continue
 		}
 		argIndex++
-		// Method needs one out: error.
-		if mtype.NumOut() != 1 {
+
+		// Method needs
+		// one out: 		error(message).
+		// or two out: 		errorNumber(int) error(message).
+		// or three out: 	errorNumber(int) error(message) data(interface).
+		if mtype.NumOut() == 1 {
+			if returnType := mtype.Out(0); returnType != typeOfError {
+				continue
+			}
+		} else if mtype.NumOut() == 2 {
+			if returnType := mtype.Out(0); returnType.Kind() != reflect.Int {
+				continue
+			}
+			if returnType := mtype.Out(1); returnType != typeOfError {
+				continue
+			}
+		} else if mtype.NumOut() == 3 {
+			if returnType := mtype.Out(0); returnType.Kind() != reflect.Int {
+				continue
+			}
+			if returnType := mtype.Out(1); returnType != typeOfError {
+				continue
+			}
+			// no.2 unlimited format
+		} else {
 			continue
 		}
-		if returnType := mtype.Out(0); returnType != typeOfError {
-			continue
-		}
+
 		if m.methodIgnoreCase {
 			s.methods[strings.ToLower(method.Name)] = &serviceMethod{
 				method:     method,
