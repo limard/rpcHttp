@@ -6,6 +6,7 @@
 package jsonrpc
 
 import (
+	"bissoft/rpcHttp"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -13,8 +14,6 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
-
-	"github.com/gorilla/rpc/v2"
 )
 
 var (
@@ -50,7 +49,7 @@ func (t *Service1) ResponseJsonError(r *http.Request, req *Service1Request, res 
 	return ErrResponseJsonError
 }
 
-func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) error {
+func execute(t *testing.T, s *rpcHttp.Server, method string, req, res interface{}) error {
 	if !s.HasMethod(method) {
 		t.Fatal("Expected to be registered:", method)
 	}
@@ -66,7 +65,7 @@ func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) e
 	return DecodeClientResponse(w.Body, res)
 }
 
-func executeRaw(t *testing.T, s *rpc.Server, req json.RawMessage) (int, *bytes.Buffer) {
+func executeRaw(t *testing.T, s *rpcHttp.Server, req json.RawMessage) (int, *bytes.Buffer) {
 	r, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewBuffer(req))
 	r.Header.Set("Content-Type", "application/json")
 
@@ -86,7 +85,7 @@ func field(name string, blob json.RawMessage) (v interface{}, ok bool) {
 }
 
 func TestService(t *testing.T) {
-	s := rpc.NewServer()
+	s := rpcHttp.NewServer()
 	s.RegisterCodec(NewCodec(), "application/json")
 	s.RegisterService(new(Service1), "")
 

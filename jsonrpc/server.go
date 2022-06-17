@@ -6,12 +6,11 @@
 package jsonrpc
 
 import (
+	"bissoft/rpcHttp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/gorilla/rpc/v2"
 )
 
 var null = json.RawMessage([]byte("null"))
@@ -68,7 +67,7 @@ type Codec struct {
 }
 
 // NewRequest returns a CodecRequest.
-func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
+func (c *Codec) NewRequest(r *http.Request) rpcHttp.CodecRequest {
 	return newCodecRequest(r)
 }
 
@@ -77,7 +76,7 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 // ----------------------------------------------------------------------------
 
 // newCodecRequest returns a new CodecRequest.
-func newCodecRequest(r *http.Request) rpc.CodecRequest {
+func newCodecRequest(r *http.Request) rpcHttp.CodecRequest {
 	// Decode the request body and check if RPC method is valid.
 	req := new(serverRequest)
 	err := json.NewDecoder(r.Body).Decode(req)
@@ -150,6 +149,6 @@ func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, status int, re
 		w.Write(b)
 	} else {
 		// Not sure in which case will this happen. But seems harmless.
-		rpc.WriteError(w, 400, err.Error())
+		rpcHttp.WriteError(w, 400, err.Error())
 	}
 }

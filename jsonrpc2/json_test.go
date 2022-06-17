@@ -6,13 +6,12 @@
 package jsonrpc2
 
 import (
+	"bissoft/rpcHttp"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
-
-	"github.com/gorilla/rpc/v2"
 )
 
 // ResponseRecorder is an implementation of http.ResponseWriter that
@@ -109,7 +108,7 @@ func (t *Service1) ResponseError(r *http.Request, req *Service1Request, res *Ser
 	return ErrResponseError
 }
 
-func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) error {
+func execute(t *testing.T, s *rpcHttp.Server, method string, req, res interface{}) error {
 	if !s.HasMethod(method) {
 		t.Fatal("Expected to be registered:", method)
 	}
@@ -125,7 +124,7 @@ func execute(t *testing.T, s *rpc.Server, method string, req, res interface{}) e
 	return decodeClientResponse(w.Body, res)
 }
 
-func executeRaw(t *testing.T, s *rpc.Server, req interface{}, res interface{}) error {
+func executeRaw(t *testing.T, s *rpcHttp.Server, req interface{}, res interface{}) error {
 	j, _ := json.Marshal(req)
 	r, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewBuffer(j))
 	r.Header.Set("Content-Type", "application/json")
@@ -137,7 +136,7 @@ func executeRaw(t *testing.T, s *rpc.Server, req interface{}, res interface{}) e
 }
 
 func TestService(t *testing.T) {
-	s := rpc.NewServer()
+	s := rpcHttp.NewServer()
 	s.RegisterCodec(NewCodec(), "application/json")
 	s.RegisterService(new(Service1), "")
 
