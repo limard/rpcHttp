@@ -1,13 +1,17 @@
+//go:build none
+// +build none
+
 package main
 
 import (
-	"bissoft/rpcHttp"
-	"bissoft/rpcHttp/bsonrpc"
-	"bissoft/rpcHttp/jsonrpc2"
-	"bissoft/rpcHttp/msgpackrpc"
 	"fmt"
 	"net"
 	"net/http"
+
+	"github.com/Limard/rpcHttp"
+	"github.com/Limard/rpcHttp/bsonrpc"
+	"github.com/Limard/rpcHttp/jsonrpc2"
+	"github.com/Limard/rpcHttp/msgpackrpc"
 )
 
 var host = "127.0.0.1:8199"

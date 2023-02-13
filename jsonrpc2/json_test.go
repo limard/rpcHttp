@@ -6,12 +6,13 @@
 package jsonrpc2
 
 import (
-	"bissoft/rpcHttp"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
+
+	"github.com/Limard/rpcHttp"
 )
 
 // ResponseRecorder is an implementation of http.ResponseWriter that

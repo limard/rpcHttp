@@ -1,8 +1,12 @@
+//go:build none
+// +build none
+
 package main
 
 import (
-	"bissoft/rpcHttp"
 	"fmt"
+
+	"github.com/Limard/rpcHttp/bsonrpc"
 	"gopkg.in/mgo.v2/bson"
 )
 

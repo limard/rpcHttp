@@ -6,7 +6,6 @@
 package jsonrpc
 
 import (
-	"bissoft/rpcHttp"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -14,6 +13,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/Limard/rpcHttp"
 )
 
 var (
